@@ -257,7 +257,7 @@
 
     #total-games-label {
       font-size: 13px;
-      color: var(--text-mid);
+      color: #ffffff;
     }
 
     #total-games-display {
@@ -921,7 +921,7 @@
       border-radius: 8px;
       font-size: 20px;
       font-weight: bold;
-      color: var(--purple-pale);
+      color: #ffffff;
       flex-shrink: 0;
       user-select: none;
       -webkit-user-select: none;
@@ -991,10 +991,38 @@
       background: var(--bg);
     }
 
+    /* 名前+URL縦積み */
+    .fav-picker-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
     .fav-picker-name {
       font-size: 14px;
       color: var(--cream);
-      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fav-picker-url {
+      font-size: 10px;
+      color: var(--text-mid);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fav-picker-play {
+      font-size: 13px;
+      padding: 5px 10px;
+      background: var(--purple-deep);
+      border-radius: 6px;
+      color: #ffffff;
+      flex-shrink: 0;
     }
 
     #fav-picker-close {
@@ -1004,7 +1032,7 @@
       background: var(--bg3);
       border-radius: 8px;
       font-size: 14px;
-      color: var(--text-mid);
+      color: #ffffff; /* 白色 */
       text-align: center;
     }
 
@@ -1903,12 +1931,28 @@ function openFavPicker() {
   state.favorites.forEach(fav => {
     const item = document.createElement('div');
     item.className = 'fav-picker-item';
-    item.innerHTML = `<span class="fav-picker-name">${fav.name}</span><span style="font-size:11px;color:var(--text-mid)">${fav.url.substring(0,30)}...</span>`;
-    item.addEventListener('click', () => {
+
+    // 名前 + URL縦積み
+    const info = document.createElement('div');
+    info.className = 'fav-picker-info';
+    info.innerHTML = `
+      <span class="fav-picker-name">${fav.name}</span>
+      <span class="fav-picker-url">${fav.url}</span>
+    `;
+
+    // 再生ボタン
+    const playBtn = document.createElement('button');
+    playBtn.className = 'fav-picker-play';
+    playBtn.textContent = '▶ 再生';
+    playBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // 行クリックと重複しないよう伝播を止める
       document.getElementById('url-input').value = fav.url;
       playVideo(fav.url);
       closeFavPicker();
     });
+
+    item.appendChild(info);
+    item.appendChild(playBtn);
     list.appendChild(item);
   });
   document.getElementById('fav-picker').classList.add('open');
