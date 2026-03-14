@@ -209,9 +209,16 @@
       flex-shrink: 0;
     }
 
-    #url-input {
+    /* URL入力欄ラッパー（×ボタンを内側に重ねるため） */
+    #url-input-wrapper {
       flex: 1;
-      padding: 5px 8px;
+      position: relative;
+      min-width: 0;
+    }
+
+    #url-input {
+      width: 100%;
+      padding: 5px 28px 5px 8px; /* 右側に×ボタン分のスペース */
       background: var(--bg3);
       border: 1px solid var(--purple-deep);
       border-radius: 6px;
@@ -227,6 +234,29 @@
     #url-input:focus {
       outline: none;
       border-color: var(--purple);
+    }
+
+    /* URL クリアボタン（入力欄の内側右端） */
+    #url-clear-btn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      display: none; /* URLが空の時は非表示 */
+      align-items: center;
+      justify-content: center;
+      background: var(--bg2);
+      border-radius: 50%;
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1;
+    }
+
+    #url-clear-btn:active {
+      background: var(--bg3);
+      color: #ffffff;
     }
 
     #play-btn {
@@ -1119,7 +1149,10 @@
       </div>
       <div id="video-controls">
         <button id="fav-btn" title="お気に入り">★</button>
-        <input id="url-input" type="url" placeholder="YouTube URL を入力..." inputmode="url">
+        <div id="url-input-wrapper">
+          <input id="url-input" type="url" placeholder="YouTube URL を入力..." inputmode="url">
+          <button id="url-clear-btn" title="クリア">✕</button>
+        </div>
         <button id="play-btn">▶ 再生</button>
       </div>
     </div>
@@ -2221,6 +2254,33 @@ function bindEvents() {
       playVideo(url);
     }
   });
+
+  // URL入力欄の×クリアボタン
+  const urlInput    = document.getElementById('url-input');
+  const urlClearBtn = document.getElementById('url-clear-btn');
+
+  // 入力内容が変わるたびに×ボタンの表示を切り替える
+  function updateUrlClearBtn() {
+    urlClearBtn.style.display = urlInput.value ? 'flex' : 'none';
+  }
+
+  urlInput.addEventListener('input',  updateUrlClearBtn);
+  urlInput.addEventListener('change', updateUrlClearBtn);
+
+  // ×ボタン押下: 入力欄をクリア + 動画エリアをプレースホルダーに戻す
+  urlClearBtn.addEventListener('click', () => {
+    urlInput.value = '';
+    updateUrlClearBtn();
+    // iframeを削除してプレースホルダーを再表示
+    const iframe = document.getElementById('youtube-iframe');
+    if (iframe) iframe.remove();
+    const placeholder = document.getElementById('video-placeholder');
+    if (placeholder) placeholder.style.display = '';
+    localStorage.removeItem('slotCounter_lastUrl');
+  });
+
+  // 初期表示時にも反映（前回のURLが復元されている場合）
+  updateUrlClearBtn();
 
   document.getElementById('fav-btn').addEventListener('click', openFavPicker);
   document.getElementById('fav-picker-close').addEventListener('click', closeFavPicker);
