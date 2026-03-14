@@ -1756,6 +1756,16 @@ function renderBtnEditor() {
   const mode = state.settingsMode;
   const btnCfg = state.editingButtons[mode];
 
+  // 変更を即時保存してカウント画面に反映する
+  function applyAndSave() {
+    const profile = getCurrentProfile();
+    if (profile) {
+      profile.btnConfig = state.editingButtons;
+      saveState();
+      renderCountGrid();
+    }
+  }
+
   for (let i = 0; i < 7; i++) {
     const cfg = btnCfg[i];
     const row = document.createElement('div');
@@ -1768,12 +1778,16 @@ function renderBtnEditor() {
     nameInput.addEventListener('input', () => {
       state.editingButtons[mode][i].name = nameInput.value;
     });
+    // フォーカスが外れたタイミングで保存・反映
+    nameInput.addEventListener('blur', applyAndSave);
 
     const colorInput = document.createElement('input');
     colorInput.type = 'color';
     colorInput.value = cfg.color;
-    colorInput.addEventListener('input', () => {
+    // カラーピッカーは change（確定時）で保存・反映
+    colorInput.addEventListener('change', () => {
       state.editingButtons[mode][i].color = colorInput.value;
+      applyAndSave();
     });
 
     row.appendChild(nameInput);
