@@ -1493,17 +1493,17 @@ function toggleSubtractMode() {
   renderCountGrid();
 }
 
-// リセット（カウント＋機種名をカスタム機種に戻す）
+// リセット（カウント・総ゲーム数・機種名をカスタム機種に戻す）
 function resetCounts() {
   if (!confirm('カウントと機種名をリセットしますか？')) return;
   const profile = getCurrentProfile();
   if (!profile) return;
   // カウントをリセット
   profile.counts[state.currentMode] = [0,0,0,0,0,0,0];
-  // 機種名・属性をカスタム機種に戻す
+  // 総ゲーム数もリセット
+  profile.totalGames = 0;
+  // 機種名をカスタム機種に戻す
   profile.name = 'カスタム機種';
-  profile.isJuggler = false;
-  profile.jugglerData = null;
   saveState();
   renderAll();
   showToast('リセットしました');
@@ -1777,38 +1777,55 @@ function saveGames() {
 
 // ============================================================
 // 長押しヘルパー（時間ベース2段階加速、カウントボタン用）
+// iPhone7などの古い機種でも確実に停止できるよう堅牢に実装
 // ============================================================
-function startLongPress(callback, initialMs, fastMs, accelAfterMs = 1500) {
-  let intervalId = setInterval(callback, initialMs);
-  const accelTimer = setTimeout(() => {
-    clearInterval(intervalId);
-    intervalId = setInterval(callback, fastMs);
-  }, accelAfterMs);
-
-  return function stop() {
-    clearInterval(intervalId);
-    clearTimeout(accelTimer);
-  };
-}
-
-// ボタン要素に長押しイベントをバインドする（カウントボタン用）
 function bindLongPress(el, callback, initialMs, fastMs) {
-  let stopFn = null;
+  let intervalId = null;  // 常に単一のintervalIdを管理
+  let accelTimer = null;
+
+  // 既存のintervalを確実にクリアする（多重起動防止）
+  function stopAll() {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    if (accelTimer !== null) {
+      clearTimeout(accelTimer);
+      accelTimer = null;
+    }
+  }
 
   function onStart(e) {
     e.preventDefault();
-    if (stopFn) stopFn();
+    stopAll(); // 開始前に必ずクリア
     callback(); // 即時1回実行
-    stopFn = startLongPress(callback, initialMs, fastMs);
+    // 最初はinitialMs間隔で繰り返し
+    intervalId = setInterval(callback, initialMs);
+    // accelAfterMs後にfastMsに加速
+    accelTimer = setTimeout(() => {
+      stopAll();
+      intervalId = setInterval(callback, fastMs);
+    }, 1500);
   }
 
+  // 停止処理を一つの関数に集約（すべての終了イベントから呼ぶ）
   function onEnd() {
-    if (stopFn) { stopFn(); stopFn = null; }
+    stopAll();
   }
 
-  el.addEventListener('touchstart',  onStart, { passive: false });
-  el.addEventListener('touchend',    onEnd);
-  el.addEventListener('touchcancel', onEnd);
+  // touchmoveでボタン外に出た場合も停止
+  function onTouchMove(e) {
+    const touch = e.changedTouches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target !== el) {
+      onEnd();
+    }
+  }
+
+  el.addEventListener('touchstart',  onStart,      { passive: false });
+  el.addEventListener('touchend',    onEnd,         { passive: true });
+  el.addEventListener('touchcancel', onEnd,         { passive: true });
+  el.addEventListener('touchmove',   onTouchMove,   { passive: true });
   el.addEventListener('mousedown',   onStart);
   el.addEventListener('mouseup',     onEnd);
   el.addEventListener('mouseleave',  onEnd);
