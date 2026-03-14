@@ -1837,9 +1837,11 @@ function bindTotalGamesBtn(el, delta) {
 
   // 各段階の切り替え閾値とその後のインターバル(ms)
   const STAGES = [
-    { at: 50,  ms: 50 },
-    { at: 150, ms: 25 },
-    { at: 250, ms: 10 },
+    { at: 30,  ms: 50 },
+    { at: 130, ms: 25 },
+    { at: 230, ms: 10 },
+    { at: 330, ms: 5  },
+    { at: 430, ms: 1  },
   ];
 
   function tick() {
