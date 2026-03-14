@@ -80,11 +80,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 12px;
+      padding: 4px 12px;
       background: var(--bg2);
       border-bottom: 1px solid var(--bg3);
       flex-shrink: 0;
-      min-height: 48px;
+      min-height: 36px;
     }
 
     #app-title {
@@ -152,7 +152,7 @@
     /* ===== YouTube動画エリア ===== */
     #video-section {
       flex-shrink: 0;
-      height: 31vh; /* 画面高さの31% */
+      height: 38vh; /* 画面高さの約38% */
       background: #000;
       display: flex;
       flex-direction: column;
@@ -286,7 +286,7 @@
 
     .mode-tab {
       flex: 1;
-      padding: 8px 4px;
+      padding: 4px 4px;
       font-size: 13px;
       font-weight: bold;
       color: var(--text-mid);
@@ -317,7 +317,7 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(2, 1fr);
-      gap: 4px;
+      gap: 3px;
       flex: 1;
     }
 
@@ -325,13 +325,13 @@
     .count-btn {
       display: flex;
       flex-direction: column;
-      align-items: stretch; /* 横幅いっぱいに子要素を広げる */
+      align-items: stretch;
       justify-content: flex-start;
       background: var(--bg2);
       border: 1px solid var(--bg3);
-      border-radius: 8px;
-      padding: 4px 4px 4px;
-      gap: 2px;
+      border-radius: 20px; /* 大きく丸く */
+      padding: 6px 6px 4px;
+      gap: 1px;
       transition: all 0.1s;
       position: relative;
       overflow: hidden;
@@ -339,7 +339,7 @@
     }
 
     .count-btn:active {
-      transform: scale(0.96);
+      transform: scale(0.95);
       filter: brightness(1.2);
     }
 
@@ -354,36 +354,36 @@
       width: 100%;
       flex: 1;
       min-height: 0;
-      border-radius: 5px;
+      border-radius: 12px;
     }
 
-    /* カウント数: 大きく */
+    /* カウント数: 大きく・白色 */
     .count-btn .btn-count {
-      font-size: 20px;
+      font-size: 48px;
       font-weight: bold;
-      color: var(--cream);
-      line-height: 1.1;
-      text-align: center;
-    }
-
-    /* 確率: 小さめ */
-    .count-btn .btn-prob {
-      font-size: 10px;
-      color: var(--text-mid);
+      color: #ffffff;
       line-height: 1;
       text-align: center;
     }
 
-    /* 項目名: 一番下 */
+    /* 確率: 小さめ・白色 */
+    .count-btn .btn-prob {
+      font-size: 14px;
+      color: #ffffff;
+      line-height: 1;
+      text-align: center;
+    }
+
+    /* 項目名: 一番下・白色 */
     .count-btn .btn-name {
-      font-size: 11px;
-      color: var(--purple-pale);
-      line-height: 1.1;
+      font-size: 12px;
+      color: #ffffff;
+      line-height: 1.2;
       text-align: center;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      padding: 0 2px;
+      padding: 2px 2px;
     }
 
     /* 減算スイッチ */
@@ -391,15 +391,19 @@
       background: var(--bg3);
       border-color: var(--purple-deep);
       cursor: pointer;
+      justify-content: center;
+      align-items: center;
     }
 
     .subtract-switch .switch-label {
-      font-size: 11px;
-      color: var(--text-mid);
+      font-size: 13px;
+      color: #ffffff;
+      text-align: center;
     }
 
     .subtract-switch .switch-indicator {
-      font-size: 20px;
+      font-size: 22px;
+      text-align: center;
     }
 
     .subtract-switch.active {
@@ -416,7 +420,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 12px;
+      padding: 3px 12px;
       background: var(--bg2);
       border-top: 1px solid var(--bg3);
       flex-shrink: 0;
@@ -1034,7 +1038,6 @@
       <span id="total-games-landscape-val">0</span>
     </div>
     <div id="top-bar-right">
-      <button class="top-btn" id="estimate-btn">設定推測</button>
       <button id="settings-btn">⚙️</button>
     </div>
   </div>
@@ -1085,6 +1088,7 @@
   <div id="bottom-bar">
     <span id="machine-name-display">機種名未設定</span>
     <div id="bottom-bar-right">
+      <button class="top-btn" id="estimate-btn">設定推測</button>
       <button id="reset-btn">リセット</button>
     </div>
   </div>
@@ -1520,9 +1524,10 @@ function renderCountGrid() {
     grid.appendChild(btn);
   }
 
-  // 減算スイッチ (8セル目)
+  // 減算スイッチ (8セル目) — 縦横中央揃え
   const swBtn = document.createElement('button');
   swBtn.className = 'count-btn subtract-switch' + (state.subtractMode ? ' active' : '');
+  swBtn.style.cssText = 'justify-content:center; align-items:center;';
   swBtn.innerHTML = `
     <div class="switch-indicator">${state.subtractMode ? '➖' : '➕'}</div>
     <div class="switch-label">${state.subtractMode ? '減算ON' : '減算OFF'}</div>
