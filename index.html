@@ -762,61 +762,85 @@
     .fav-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       margin-bottom: 10px;
+      max-height: 35vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .fav-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 10px;
+      padding: 6px 8px;
       background: var(--bg3);
       border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    /* 番号 */
+    .fav-item-num {
+      font-size: 11px;
+      color: var(--text-mid);
+      flex-shrink: 0;
+      min-width: 18px;
+      text-align: right;
+    }
+
+    /* 名前 + URL（縦積み） */
+    .fav-item-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
 
     .fav-item-name {
       font-size: 13px;
       color: var(--cream);
-      flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .fav-item-url {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-mid);
-      flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .fav-item-play {
-      font-size: 14px;
-      padding: 3px 7px;
+      font-size: 13px;
+      padding: 4px 8px;
       background: var(--purple-deep);
       border-radius: 5px;
       color: var(--cream);
+      flex-shrink: 0;
     }
 
     .fav-item-del {
-      font-size: 14px;
-      padding: 3px 7px;
+      font-size: 13px;
+      padding: 4px 8px;
       background: #3a1010;
       border-radius: 5px;
       color: #ef4444;
+      flex-shrink: 0;
     }
 
+    /* 追加フォーム: URL → 名前 → 追加ボタンを縦1列 */
     .add-fav-form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-direction: column;
       gap: 6px;
     }
 
     .add-fav-form input {
-      padding: 7px 9px;
+      width: 100%;
+      padding: 8px 10px;
       background: var(--bg3);
       border: 1px solid var(--purple-deep);
       border-radius: 6px;
@@ -824,12 +848,17 @@
     }
 
     .add-fav-form button {
-      grid-column: 1 / -1;
-      padding: 8px;
+      width: 100%;
+      padding: 9px;
       background: var(--purple-deep);
       border-radius: 6px;
       font-size: 13px;
+      font-weight: bold;
       color: var(--cream);
+    }
+
+    .add-fav-form button:active {
+      background: var(--purple-dark);
     }
 
     /* ===== 総ゲーム数 +/- ボタン ===== */
@@ -1101,17 +1130,16 @@
       </div>
       <!-- お気に入りURLタブ -->
       <div id="tab-favs" class="hidden">
-        <div class="fav-list" id="fav-editor-list"></div>
-        <div class="add-fav-form">
-          <input type="text" id="new-fav-name" placeholder="名前">
-          <input type="url" id="new-fav-url" placeholder="YouTube URL">
+        <div class="add-fav-form" style="margin-bottom:10px;">
+          <input type="url"  id="new-fav-url"  placeholder="YouTube URL（必須）" inputmode="url">
+          <input type="text" id="new-fav-name" placeholder="名前（省略時はURLをそのまま使用）">
           <button id="add-fav-btn">追加</button>
         </div>
+        <div class="fav-list" id="fav-editor-list"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-primary" id="settings-save-btn">保存</button>
-      <button class="btn-secondary" id="settings-cancel-btn">キャンセル</button>
+      <button class="btn-secondary" id="settings-cancel-btn">閉じる</button>
     </div>
   </div>
 </div>
@@ -1664,6 +1692,15 @@ function renderFavEditor() {
     const item = document.createElement('div');
     item.className = 'fav-item';
 
+    // 番号
+    const num = document.createElement('span');
+    num.className = 'fav-item-num';
+    num.textContent = i + 1 + '.';
+
+    // 名前 + URL（縦積み）
+    const info = document.createElement('div');
+    info.className = 'fav-item-info';
+
     const name = document.createElement('span');
     name.className = 'fav-item-name';
     name.textContent = fav.name;
@@ -1671,6 +1708,9 @@ function renderFavEditor() {
     const url = document.createElement('span');
     url.className = 'fav-item-url';
     url.textContent = fav.url;
+
+    info.appendChild(name);
+    info.appendChild(url);
 
     const playBtn = document.createElement('button');
     playBtn.className = 'fav-item-play';
@@ -1690,8 +1730,8 @@ function renderFavEditor() {
       renderFavEditor();
     });
 
-    item.appendChild(name);
-    item.appendChild(url);
+    item.appendChild(num);
+    item.appendChild(info);
     item.appendChild(playBtn);
     item.appendChild(delBtn);
     list.appendChild(item);
@@ -1709,15 +1749,16 @@ function saveSettings() {
   showToast('設定を保存しました');
 }
 
-// お気に入りURL追加
+// お気に入りURL追加（名前省略時はURLをそのまま使用、追加時点で即時保存）
 function addFavorite() {
-  const name = document.getElementById('new-fav-name').value.trim();
   const url = document.getElementById('new-fav-url').value.trim();
-  if (!name || !url) { showToast('名前とURLを入力してください'); return; }
+  if (!url) { showToast('URLを入力してください'); return; }
+  const rawName = document.getElementById('new-fav-name').value.trim();
+  const name = rawName || url; // 名前が空ならURLをそのまま使用
   state.favorites.push({ name, url });
   document.getElementById('new-fav-name').value = '';
   document.getElementById('new-fav-url').value = '';
-  saveState();
+  saveState(); // 追加時点で即時保存
   renderFavEditor();
   showToast('お気に入りに追加しました');
 }
@@ -1945,7 +1986,6 @@ function bindEvents() {
   // 設定ボタン
   document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
   document.getElementById('settings-modal-close').addEventListener('click', closeSettingsModal);
-  document.getElementById('settings-save-btn').addEventListener('click', saveSettings);
   document.getElementById('settings-cancel-btn').addEventListener('click', closeSettingsModal);
 
   // 設定モーダル外クリック
