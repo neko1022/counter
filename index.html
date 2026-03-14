@@ -1776,9 +1776,7 @@ function saveGames() {
 }
 
 // ============================================================
-// 長押し（高速連続入力）ヘルパー
-// initialMs: 最初の繰り返し間隔, fastMs: 加速後の間隔
-// accelAfterMs: 加速までの時間
+// 長押しヘルパー（時間ベース2段階加速、カウントボタン用）
 // ============================================================
 function startLongPress(callback, initialMs, fastMs, accelAfterMs = 1500) {
   let intervalId = setInterval(callback, initialMs);
@@ -1793,7 +1791,7 @@ function startLongPress(callback, initialMs, fastMs, accelAfterMs = 1500) {
   };
 }
 
-// ボタン要素に長押しイベントをバインドする
+// ボタン要素に長押しイベントをバインドする（カウントボタン用）
 function bindLongPress(el, callback, initialMs, fastMs) {
   let stopFn = null;
 
@@ -1814,7 +1812,6 @@ function bindLongPress(el, callback, initialMs, fastMs) {
   el.addEventListener('mousedown',   onStart);
   el.addEventListener('mouseup',     onEnd);
   el.addEventListener('mouseleave',  onEnd);
-  // コンテキストメニュー（長押しポップアップ）を抑制
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 
@@ -1826,7 +1823,54 @@ function changeTotalGames(delta) {
   if (!profile) return;
   profile.totalGames = Math.max(0, profile.totalGames + delta);
   saveState();
-  renderTotalGames();
+  renderTotalGames(); // 数値表示のみ即時更新（確率はrelease時に更新）
+}
+
+// 総ゲーム数 +/- ボタン専用バインド
+// カウントベース3段階加速: 100ms(0〜99回) → 50ms(100〜199回) → 25ms(200回〜)
+// 指を離したタイミングで確率表示を再計算する
+function bindTotalGamesBtn(el, delta) {
+  let intervalId = null;
+  let tickCount = 0;
+  let didChange = false;
+
+  function tick() {
+    changeTotalGames(delta);
+    didChange = true;
+    tickCount++;
+    // 100回ごとにインターバルを半分に（最小25ms）
+    if (tickCount === 100 || tickCount === 200) {
+      clearInterval(intervalId);
+      const nextMs = tickCount === 100 ? 50 : 25;
+      intervalId = setInterval(tick, nextMs);
+    }
+  }
+
+  function onStart(e) {
+    e.preventDefault();
+    if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    tickCount = 0;
+    didChange = false;
+    tick(); // 即時1回実行
+    intervalId = setInterval(tick, 100); // 最初は100ms間隔
+  }
+
+  function onEnd() {
+    if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    // 離したタイミングで確率表示を更新
+    if (didChange) {
+      renderCountGrid();
+      didChange = false;
+    }
+  }
+
+  el.addEventListener('touchstart',  onStart, { passive: false });
+  el.addEventListener('touchend',    onEnd);
+  el.addEventListener('touchcancel', onEnd);
+  el.addEventListener('mousedown',   onStart);
+  el.addEventListener('mouseup',     onEnd);
+  el.addEventListener('mouseleave',  onEnd);
+  el.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 // ============================================================
@@ -1855,15 +1899,9 @@ function handleOrientationChange() {
 // イベントバインド
 // ============================================================
 function bindEvents() {
-  // 総ゲーム数 +/- 長押し（最初100ms間隔、1.5秒後に50msに加速）
-  bindLongPress(
-    document.getElementById('total-games-inc'),
-    () => changeTotalGames(+1), 100, 50
-  );
-  bindLongPress(
-    document.getElementById('total-games-dec'),
-    () => changeTotalGames(-1), 100, 50
-  );
+  // 総ゲーム数 +/- ボタン（カウントベース3段階加速、離したら確率更新）
+  bindTotalGamesBtn(document.getElementById('total-games-inc'), +1);
+  bindTotalGamesBtn(document.getElementById('total-games-dec'), -1);
 
   // 機種切替モーダル（設定画面からのアクセス用に残す）
   document.getElementById('machine-modal-close').addEventListener('click', closeMachineModal);
