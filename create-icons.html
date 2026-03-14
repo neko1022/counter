@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>アイコン生成ツール</title>
+  <style>
+    body { background: #1a0a24; color: #F8F2FC; font-family: sans-serif; padding: 20px; }
+    canvas { border: 1px solid #7B0FA0; margin: 10px; }
+    button { padding: 10px 20px; background: #7B0FA0; color: white; border: none; border-radius: 6px; cursor: pointer; margin: 5px; font-size: 14px; }
+    button:hover { background: #A020B8; }
+    h2 { color: #E8D0F0; }
+    .info { color: #6B3A82; font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>スロットカウンター アイコン生成ツール</h2>
+  <p class="info">このページを開いてボタンをクリックすると、アイコンPNGをダウンロードできます。<br>
+  ダウンロードしたファイルをiconsフォルダに配置してください。</p>
+
+  <div>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+    <canvas id="canvas512" width="512" height="512"></canvas>
+  </div>
+  <div>
+    <button onclick="downloadIcon(192)">icon-192.png をダウンロード</button>
+    <button onclick="downloadIcon(512)">icon-512.png をダウンロード</button>
+    <button onclick="downloadAll()">両方ダウンロード</button>
+  </div>
+
+  <script>
+    // スロットマシンアイコンを描画する関数
+    function drawSlotIcon(canvas) {
+      const size = canvas.width;
+      const ctx = canvas.getContext('2d');
+      const s = size / 192; // スケール係数
+
+      // 背景グラデーション
+      const bgGrad = ctx.createRadialGradient(
+        size/2, size/2, 0,
+        size/2, size/2, size/2
+      );
+      bgGrad.addColorStop(0, '#2a1040');
+      bgGrad.addColorStop(1, '#1a0a24');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, size, size);
+
+      // 外枠の角丸矩形
+      const margin = 16 * s;
+      const radius = 24 * s;
+      roundRect(ctx, margin, margin, size - margin*2, size - margin*2, radius);
+
+      const borderGrad = ctx.createLinearGradient(0, 0, size, size);
+      borderGrad.addColorStop(0, '#A020B8');
+      borderGrad.addColorStop(1, '#7B0FA0');
+      ctx.strokeStyle = borderGrad;
+      ctx.lineWidth = 4 * s;
+      ctx.stroke();
+
+      const bodyGrad = ctx.createLinearGradient(margin, margin, margin, size - margin);
+      bodyGrad.addColorStop(0, '#3a1a52');
+      bodyGrad.addColorStop(1, '#2a1040');
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+
+      // スロットリール (3つ)
+      const reelW = 36 * s;
+      const reelH = 44 * s;
+      const reelY = 56 * s;
+      const reelGap = 8 * s;
+      const totalReelW = reelW * 3 + reelGap * 2;
+      const reelStartX = (size - totalReelW) / 2;
+
+      for (let i = 0; i < 3; i++) {
+        const rx = reelStartX + i * (reelW + reelGap);
+        // リール背景
+        roundRect(ctx, rx, reelY, reelW, reelH, 6 * s);
+        ctx.fillStyle = '#F8F2FC';
+        ctx.fill();
+        ctx.strokeStyle = '#E8D0F0';
+        ctx.lineWidth = 1.5 * s;
+        ctx.stroke();
+
+        // リール内の絵柄
+        ctx.font = `bold ${20 * s}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const emojis = ['🍇', '🍒', '⭐'];
+        ctx.fillText(emojis[i], rx + reelW/2, reelY + reelH/2);
+      }
+
+      // リールの区切り線 (中央の当選ライン)
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 2 * s;
+      ctx.setLineDash([4 * s, 3 * s]);
+      ctx.beginPath();
+      ctx.moveTo(margin + 8 * s, reelY + reelH/2);
+      ctx.lineTo(size - margin - 8 * s, reelY + reelH/2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // テキスト "スロット"
+      ctx.font = `bold ${15 * s}px 'Hiragino Sans', 'Yu Gothic', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const textGrad = ctx.createLinearGradient(0, 110*s, 0, 130*s);
+      textGrad.addColorStop(0, '#E8D0F0');
+      textGrad.addColorStop(1, '#A020B8');
+      ctx.fillStyle = textGrad;
+      ctx.fillText('スロット', size/2, 120 * s);
+
+      // テキスト "カウンター"
+      ctx.font = `bold ${12 * s}px 'Hiragino Sans', 'Yu Gothic', sans-serif`;
+      ctx.fillStyle = '#7B0FA0';
+      ctx.fillText('カウンター', size/2, 138 * s);
+
+      // 下部のカウンター表示
+      const counterY = 152 * s;
+      const counterH = 20 * s;
+      const counterW = 120 * s;
+      roundRect(ctx, (size - counterW)/2, counterY, counterW, counterH, 4 * s);
+      ctx.fillStyle = '#1a0a24';
+      ctx.fill();
+      ctx.strokeStyle = '#A020B8';
+      ctx.lineWidth = 1.5 * s;
+      ctx.stroke();
+
+      ctx.font = `bold ${11 * s}px monospace`;
+      ctx.fillStyle = '#A020B8';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('0000 / 1234G', size/2, counterY + counterH/2);
+
+      // 輝きエフェクト (コーナー)
+      const glowColors = ['#FFD700', '#ef4444', '#22c55e', '#A020B8'];
+      const glowPos = [
+        [margin + 8*s, margin + 8*s],
+        [size - margin - 8*s, margin + 8*s],
+        [margin + 8*s, size - margin - 8*s],
+        [size - margin - 8*s, size - margin - 8*s]
+      ];
+      glowPos.forEach(([x, y], i) => {
+        ctx.beginPath();
+        ctx.arc(x, y, 4 * s, 0, Math.PI * 2);
+        ctx.fillStyle = glowColors[i];
+        ctx.fill();
+      });
+    }
+
+    // 角丸矩形を描くヘルパー
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h, x, y + h - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+
+    // アイコンをダウンロード
+    function downloadIcon(size) {
+      const canvas = document.getElementById(`canvas${size}`);
+      const link = document.createElement('a');
+      link.download = `icon-${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function downloadAll() {
+      downloadIcon(192);
+      setTimeout(() => downloadIcon(512), 500);
+    }
+
+    // 初期化: 両方のキャンバスにアイコン描画
+    drawSlotIcon(document.getElementById('canvas192'));
+    drawSlotIcon(document.getElementById('canvas512'));
+  </script>
+</body>
+</html>

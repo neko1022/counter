@@ -196,7 +196,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 8px;
+      padding: 9px 8px;
       background: var(--bg2);
       border-top: 1px solid var(--bg3);
       flex-shrink: 0;
@@ -276,13 +276,22 @@
     #total-games-bar {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 7px 12px;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
       background: var(--bg2);
       border-top: 1px solid var(--bg3);
       border-bottom: 1px solid var(--bg3);
       flex-shrink: 0;
+    }
+
+    /* 総ゲーム数バー中央グループ（＋・数字・－） */
+    #total-games-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: center;
     }
 
     #total-games-label {
@@ -446,34 +455,6 @@
 
     .subtract-switch.active .switch-label {
       color: #ef4444;
-    }
-
-    /* ===== ボトムプロファイルバー ===== */
-    #bottom-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 3px 12px;
-      background: var(--bg2);
-      border-top: 1px solid var(--bg3);
-      flex-shrink: 0;
-    }
-
-    #machine-name-display {
-      font-size: 14px;
-      font-weight: bold;
-      color: var(--purple-pale);
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    #bottom-bar-right {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-shrink: 0;
     }
 
     #reset-btn {
@@ -1162,9 +1143,12 @@
       <!-- 縦向き: 総ゲーム数バー -->
       <div id="total-games-bar">
         <span id="total-games-label">総ゲーム数</span>
-        <button class="games-adj-btn" id="total-games-inc">＋</button>
-        <button id="total-games-display">0</button>
-        <button class="games-adj-btn" id="total-games-dec">－</button>
+        <div id="total-games-center">
+          <button class="games-adj-btn" id="total-games-inc">＋</button>
+          <button id="total-games-display">0</button>
+          <button class="games-adj-btn" id="total-games-dec">－</button>
+        </div>
+        <button id="reset-btn">リセット</button>
       </div>
 
       <!-- モードタブ -->
@@ -1183,13 +1167,6 @@
     </div>
   </div>
 
-  <!-- ===== ボトムプロファイルバー ===== -->
-  <div id="bottom-bar">
-    <span id="machine-name-display">機種名未設定</span>
-    <div id="bottom-bar-right">
-      <button id="reset-btn">リセット</button>
-    </div>
-  </div>
 </div>
 
 <!-- ===== お気に入りピッカー ===== -->
@@ -1582,11 +1559,6 @@ function renderTotalGames() {
 }
 
 // 機種名表示更新
-function renderMachineName() {
-  const profile = getCurrentProfile();
-  document.getElementById('machine-name-display').textContent = profile ? profile.name : '未設定';
-}
-
 // モードタブを更新
 function renderModeTabs() {
   document.querySelectorAll('.mode-tab').forEach(tab => {
@@ -1599,7 +1571,6 @@ function renderModeTabs() {
 function renderAll() {
   renderCountGrid();
   renderTotalGames();
-  renderMachineName();
   renderModeTabs();
 }
 
@@ -1632,7 +1603,7 @@ function toggleSubtractMode() {
 
 // リセット（カウント・総ゲーム数・機種名をカスタム機種に戻す）
 function resetCounts() {
-  if (!confirm('カウントと機種名をリセットしますか？')) return;
+  if (!confirm('カウントと総ゲーム数をリセットしますか？')) return;
   const profile = getCurrentProfile();
   if (!profile) return;
   // カウントをリセット
