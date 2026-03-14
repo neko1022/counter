@@ -1269,31 +1269,35 @@ const JUGGLER_MACHINES = [
   }
 ];
 
-// ジャグラー機種のデフォルトボタン設定
+// ============================================================
+// データバージョン管理
+// このバージョンを上げるとlocalStorageのボタン設定がリセットされる
+// ============================================================
+const DATA_VERSION = '2';
+
+// ジャグラー機種のデフォルトボタン設定 (7個: インデックス0〜6)
 const JUGGLER_BUTTON_CONFIG = [
-  // モードA-C共通のボタン設定 (ジャグラー専用)
-  { name: 'ぶどう',   color: '#22c55e' },
-  { name: 'BIG',     color: '#f97316' },
-  { name: 'REG',     color: '#888888' },
-  { name: 'チェリー', color: '#ef4444' },
-  { name: 'その他',   color: '#38bdf8' },
-  { name: '',         color: '#6B3A82' },
-  { name: '',         color: '#6B3A82' }
+  { name: 'ぶどう',   color: '#22c55e' }, // 0
+  { name: 'BIG',     color: '#f97316' }, // 1
+  { name: 'REG',     color: '#888888' }, // 2
+  { name: 'チェリー', color: '#ef4444' }, // 3
+  { name: 'その他',   color: '#38bdf8' }, // 4
+  { name: '',         color: '#6B3A82' }, // 5 (予備)
+  { name: '',         color: '#6B3A82' }  // 6 (予備)
 ];
 
-// デフォルトのボタン設定
+// デフォルトのボタン設定 (7個: インデックス0〜6、8マス目は減算スイッチ固定)
 const DEFAULT_BUTTON_CONFIGS = [
-  // 上段: ベル, スイカ, チェリー, チャンス目
-  { name: 'ベル',     color: '#FFD700' },
-  { name: 'スイカ',   color: '#22c55e' },
-  { name: 'チェリー', color: '#ef4444' },
-  { name: 'チャンス目', color: '#a855f7' },
-  // 下段: BIG, REG, その他, (減算スイッチ)
-  { name: 'BIG',     color: '#f97316' },
-  { name: 'REG',     color: '#888888' },
-  { name: 'その他',   color: '#38bdf8' },
-  // 7番目はダミー (減算スイッチが入る位置)
-  { name: '',         color: '#6B3A82' }
+  // 上段
+  { name: 'ベル',       color: '#FFD700' }, // 0
+  { name: 'スイカ',     color: '#22c55e' }, // 1
+  { name: 'チェリー',   color: '#ef4444' }, // 2
+  { name: 'チャンス目', color: '#a855f7' }, // 3
+  // 下段
+  { name: 'BIG',       color: '#f97316' }, // 4
+  { name: 'REG',       color: '#888888' }, // 5
+  { name: 'その他',     color: '#38bdf8' }, // 6
+  // インデックス7は減算スイッチのため使用しない
 ];
 
 // ============================================================
@@ -1359,25 +1363,71 @@ function saveState() {
   if (lastUrl) localStorage.setItem('slotCounter_lastUrl', lastUrl);
 }
 
+// デフォルトプロファイル一式を新規作成する
+function createDefaultProfiles() {
+  const profiles = [];
+  profiles.push(createProfile('カスタム機種', false));
+  JUGGLER_MACHINES.forEach((m, i) => {
+    profiles.push(createProfile(m.name, true, i));
+  });
+  return profiles;
+}
+
 function loadState() {
-  try {
-    const profiles = JSON.parse(localStorage.getItem('slotCounter_profiles') || '[]');
-    state.profiles = profiles;
-  } catch(e) { state.profiles = []; }
+  // ============================================================
+  // バージョンチェック: DATA_VERSIONが変わったらボタン設定をリセット
+  // カウントデータ・お気に入りは引き継ぐ
+  // ============================================================
+  const savedVersion = localStorage.getItem('slotCounter_version');
+  if (savedVersion !== DATA_VERSION) {
+    console.log(`データバージョン更新: ${savedVersion} → ${DATA_VERSION}。ボタン設定をリセットします。`);
 
-  // プロファイルが0件の場合はデフォルト作成
-  if (state.profiles.length === 0) {
-    // デフォルト機種 + 全ジャグラー追加
-    const defaultProfile = createProfile('カスタム機種', false);
-    state.profiles.push(defaultProfile);
-    JUGGLER_MACHINES.forEach((m, i) => {
-      state.profiles.push(createProfile(m.name, true, i));
-    });
-  }
+    // カウントデータとお気に入りを退避
+    let oldCounts = null;
+    let oldTotalGames = null;
+    try {
+      const oldProfiles = JSON.parse(localStorage.getItem('slotCounter_profiles') || '[]');
+      // カスタム機種（先頭）のカウントのみ引き継ぐ
+      if (oldProfiles.length > 0) {
+        oldCounts = oldProfiles[0].counts;
+        oldTotalGames = oldProfiles[0].totalGames;
+      }
+    } catch(e) {}
 
-  state.currentProfileId = localStorage.getItem('slotCounter_currentProfileId');
-  if (!state.currentProfileId || !state.profiles.find(p => p.id == state.currentProfileId)) {
+    // localStorage を全クリアしてデフォルトで再構築
+    localStorage.removeItem('slotCounter_profiles');
+    localStorage.removeItem('slotCounter_currentProfileId');
+
+    // 新しいプロファイルを作成
+    state.profiles = createDefaultProfiles();
+
+    // カウントデータを復元（ある場合のみ）
+    if (oldCounts) {
+      state.profiles[0].counts = oldCounts;
+      state.profiles[0].totalGames = oldTotalGames || 0;
+    }
+
+    // バージョンを記録して保存
+    localStorage.setItem('slotCounter_version', DATA_VERSION);
+    localStorage.setItem('slotCounter_profiles', JSON.stringify(state.profiles));
     state.currentProfileId = state.profiles[0].id;
+    localStorage.setItem('slotCounter_currentProfileId', state.currentProfileId);
+  } else {
+    // バージョンが同じ場合は通常読み込み
+    try {
+      const profiles = JSON.parse(localStorage.getItem('slotCounter_profiles') || '[]');
+      state.profiles = profiles;
+    } catch(e) { state.profiles = []; }
+
+    // プロファイルが0件の場合はデフォルト作成
+    if (state.profiles.length === 0) {
+      state.profiles = createDefaultProfiles();
+    }
+
+    state.currentProfileId = localStorage.getItem('slotCounter_currentProfileId');
+    if (!state.currentProfileId || !state.profiles.find(p => p.id == state.currentProfileId)) {
+      state.currentProfileId = state.profiles[0].id;
+    }
   }
 
   try {
