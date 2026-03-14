@@ -1452,18 +1452,51 @@ function playVideo(url) {
   const placeholder = document.getElementById('video-placeholder');
   if (placeholder) placeholder.style.display = 'none';
 
-  // 毎回iframeを作り直して確実に再生（既存プレイヤーの状態に依存しない）
+  // IFrame API 初期化済みで既存プレイヤーがある → loadVideoById + playVideo で切り替え
+  // （ユーザー操作のイベントハンドラ内から呼ぶので iOS でも自動再生が許可される）
+  if (ytPlayerReady && ytPlayer) {
+    ytPlayer.loadVideoById(videoId);
+    ytPlayer.playVideo();
+    localStorage.setItem('slotCounter_lastUrl', url);
+    return;
+  }
+
+  // 古い iframe / プレイヤーをリセット
   const old = document.getElementById('youtube-iframe');
   if (old) old.remove();
   ytPlayer = null;
 
-  const iframe = document.createElement('iframe');
-  iframe.id = 'youtube-iframe';
-  iframe.style.cssText = 'width:100%;height:100%;border:none;';
-  iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-  iframe.allowFullscreen = true;
-  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
-  container.appendChild(iframe);
+  if (ytPlayerReady) {
+    // IFrame API でプレイヤーを新規作成
+    // div を置いて YT.Player が iframe に置き換える
+    const div = document.createElement('div');
+    div.id = 'youtube-iframe';
+    div.style.cssText = 'width:100%;height:100%;';
+    container.appendChild(div);
+
+    ytPlayer = new YT.Player('youtube-iframe', {
+      videoId: videoId,
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0 },
+      events: {
+        onReady: (e) => {
+          // 作成された iframe のスタイルを整える
+          const iframe = e.target.getIframe();
+          if (iframe) iframe.style.cssText = 'width:100%;height:100%;border:none;';
+          // onReady はユーザー操作の流れで呼ばれるので iOS でも再生可能
+          e.target.playVideo();
+        }
+      }
+    });
+  } else {
+    // IFrame API 未準備のフォールバック: 直接 src で埋め込み
+    const iframe = document.createElement('iframe');
+    iframe.id = 'youtube-iframe';
+    iframe.style.cssText = 'width:100%;height:100%;border:none;';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    iframe.allowFullscreen = true;
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
+    container.appendChild(iframe);
+  }
 
   localStorage.setItem('slotCounter_lastUrl', url);
 }
