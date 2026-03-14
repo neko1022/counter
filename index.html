@@ -1255,7 +1255,7 @@
 // データバージョン管理
 // このバージョンを上げるとlocalStorageがリセットされる
 // ============================================================
-const DATA_VERSION = '3';
+const DATA_VERSION = '4';
 
 // デフォルトのボタン設定 (7個: インデックス0〜6、8マス目は減算スイッチ固定)
 const DEFAULT_BUTTON_CONFIGS = [
@@ -1306,8 +1306,8 @@ function createProfile(name) {
     name,
     // モードごとのカウント配列 [mode][btnIdx]
     counts: [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]],
-    // 総ゲーム数
-    totalGames: 0,
+    // モード別総ゲーム数 [modeA, modeB, modeC]
+    totalGames: [0, 0, 0],
     // ボタン設定 [mode][btnIdx]
     btnConfig
   };
@@ -1346,7 +1346,9 @@ function loadState() {
       // カスタム機種（先頭）のカウントのみ引き継ぐ
       if (oldProfiles.length > 0) {
         oldCounts = oldProfiles[0].counts;
-        oldTotalGames = oldProfiles[0].totalGames;
+        // 旧バージョンは単一値、新バージョンは配列
+        const old = oldProfiles[0].totalGames;
+        oldTotalGames = Array.isArray(old) ? old : [old || 0, 0, 0];
       }
     } catch(e) {}
 
@@ -1360,7 +1362,7 @@ function loadState() {
     // カウントデータを復元（ある場合のみ）
     if (oldCounts) {
       state.profiles[0].counts = oldCounts;
-      state.profiles[0].totalGames = oldTotalGames || 0;
+      state.profiles[0].totalGames = oldTotalGames || [0, 0, 0];
     }
 
     // バージョンを記録して保存
@@ -1496,7 +1498,7 @@ function renderCountGrid() {
   const mode = state.currentMode;
   const counts = profile.counts[mode];
   const btnConfig = profile.btnConfig[mode];
-  const totalGames = profile.totalGames;
+  const totalGames = profile.totalGames[mode];
 
   grid.innerHTML = '';
 
@@ -1552,7 +1554,7 @@ function renderCountGrid() {
 // 総ゲーム数を表示更新
 function renderTotalGames() {
   const profile = getCurrentProfile();
-  const val = profile ? profile.totalGames : 0;
+  const val = profile ? profile.totalGames[state.currentMode] : 0;
   document.getElementById('total-games-display').textContent = val.toLocaleString();
   document.getElementById('total-games-landscape-val').textContent = val.toLocaleString();
 }
@@ -1607,8 +1609,8 @@ function resetCounts() {
   if (!profile) return;
   // カウントをリセット
   profile.counts[state.currentMode] = [0,0,0,0,0,0,0];
-  // 総ゲーム数もリセット
-  profile.totalGames = 0;
+  // 現在モードの総ゲーム数のみリセット
+  profile.totalGames[state.currentMode] = 0;
   // 機種名をカスタム機種に戻す
   profile.name = 'カスタム機種';
   saveState();
@@ -1970,7 +1972,7 @@ function closeFavPicker() {
 // ============================================================
 function openGamesModal() {
   const profile = getCurrentProfile();
-  document.getElementById('games-input').value = profile ? profile.totalGames : 0;
+  document.getElementById('games-input').value = profile ? profile.totalGames[state.currentMode] : 0;
   document.getElementById('games-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('games-input').focus(), 100);
 }
@@ -1983,7 +1985,7 @@ function saveGames() {
   const val = parseInt(document.getElementById('games-input').value) || 0;
   const profile = getCurrentProfile();
   if (profile) {
-    profile.totalGames = Math.max(0, val);
+    profile.totalGames[state.currentMode] = Math.max(0, val);
     saveState();
     renderAll();
   }
@@ -2004,7 +2006,8 @@ const IS_TOUCH = navigator.maxTouchPoints > 0;
 function changeTotalGames(delta) {
   const profile = getCurrentProfile();
   if (!profile) return;
-  profile.totalGames = Math.max(0, profile.totalGames + delta);
+  const m = state.currentMode;
+  profile.totalGames[m] = Math.max(0, profile.totalGames[m] + delta);
   saveState();
   renderTotalGames();
 }
