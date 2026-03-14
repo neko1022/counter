@@ -336,6 +336,9 @@
       position: relative;
       overflow: hidden;
       min-height: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
     }
 
     .count-btn:active {
@@ -829,71 +832,27 @@
       color: var(--cream);
     }
 
-    /* ===== 設定推測モーダル ===== */
-    .guess-result {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .guess-item {
+    /* ===== 総ゲーム数 +/- ボタン ===== */
+    .games-adj-btn {
+      width: 36px;
+      height: 36px;
       display: flex;
       align-items: center;
-      gap: 10px;
-    }
-
-    .guess-label {
-      font-size: 13px;
+      justify-content: center;
+      background: var(--bg3);
+      border: 1px solid var(--purple-deep);
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: bold;
       color: var(--purple-pale);
-      width: 40px;
       flex-shrink: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
     }
 
-    .guess-bar-track {
-      flex: 1;
-      background: var(--bg3);
-      border-radius: 4px;
-      height: 22px;
-      overflow: hidden;
-    }
-
-    .guess-bar-fill {
-      height: 100%;
-      background: var(--purple);
-      border-radius: 4px;
-      transition: width 0.5s ease;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      padding-right: 6px;
-    }
-
-    .guess-bar-fill.top {
-      background: #FFD700;
-    }
-
-    .guess-pct {
-      font-size: 12px;
-      font-weight: bold;
-      color: var(--text-dark);
-    }
-
-    .guess-pct-out {
-      font-size: 13px;
-      font-weight: bold;
-      color: var(--cream);
-      width: 48px;
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    .guess-info {
-      font-size: 12px;
-      color: var(--text-mid);
-      padding: 8px 10px;
-      background: var(--bg3);
-      border-radius: 6px;
-      line-height: 1.6;
+    .games-adj-btn:active {
+      background: var(--purple-dark);
     }
 
     /* ===== 総ゲーム数入力モーダル ===== */
@@ -1065,7 +1024,9 @@
       <!-- 縦向き: 総ゲーム数バー -->
       <div id="total-games-bar">
         <span id="total-games-label">総ゲーム数</span>
+        <button class="games-adj-btn" id="total-games-inc">＋</button>
         <button id="total-games-display">0</button>
+        <button class="games-adj-btn" id="total-games-dec">－</button>
       </div>
 
       <!-- モードタブ -->
@@ -1088,7 +1049,6 @@
   <div id="bottom-bar">
     <span id="machine-name-display">機種名未設定</span>
     <div id="bottom-bar-right">
-      <button class="top-btn" id="estimate-btn">設定推測</button>
       <button id="reset-btn">リセット</button>
     </div>
   </div>
@@ -1173,118 +1133,15 @@
   </div>
 </div>
 
-<!-- ===== ジャグラー機種選択モーダル（設定推測用） ===== -->
-<div id="juggler-select-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <div class="modal-header">
-      <span class="modal-title">機種を選択</span>
-      <button class="modal-close" id="juggler-select-close">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:var(--text-mid);margin-bottom:10px;">設定推測する機種を選んでください</p>
-      <div class="machine-list" id="juggler-select-list"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 設定推測モーダル ===== -->
-<div id="guess-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <div class="modal-header">
-      <span class="modal-title">設定推測 (ベイズ推定)</span>
-      <button class="modal-close" id="guess-modal-close">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="guess-info" id="guess-info"></div>
-      <div style="height:12px;"></div>
-      <div class="guess-result" id="guess-result"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== トースト通知 ===== -->
 <div id="toast"></div>
 
 <script>
 // ============================================================
-// ジャグラー機種データ (設定1-6の確率テーブル)
-// ============================================================
-const JUGGLER_MACHINES = [
-  {
-    name: 'ゴーゴージャグラー3',
-    // ぶどう確率 (1/X の X)
-    grape: [6.00, 5.94, 5.84, 5.74, 5.63, 5.52],
-    // BIG確率 (1/X)
-    big:   [269.7, 269.7, 259.8, 248.6, 220.4, 209.8],
-    // REG確率 (1/X)
-    reg:   [439.8, 399.6, 364.1, 315.1, 255.8, 209.8]
-  },
-  {
-    name: 'マイジャグラーV',
-    grape: [6.00, 5.94, 5.84, 5.74, 5.63, 5.52],
-    big:   [287.4, 278.1, 269.7, 255.8, 234.4, 215.1],
-    reg:   [431.2, 364.1, 315.1, 268.7, 243.9, 209.8]
-  },
-  {
-    name: 'アイムジャグラーEX 6号機',
-    grape: [6.00, 5.94, 5.84, 5.74, 5.63, 5.52],
-    big:   [297.9, 282.5, 268.7, 248.6, 224.1, 209.8],
-    reg:   [399.6, 364.1, 315.1, 268.7, 231.9, 209.8]
-  },
-  {
-    name: 'ファンキージャグラー2',
-    grape: [6.02, 5.96, 5.86, 5.76, 5.65, 5.54],
-    big:   [260.1, 256.8, 248.6, 238.4, 215.1, 195.9],
-    reg:   [509.1, 443.0, 364.1, 315.1, 255.8, 209.8]
-  },
-  {
-    name: 'ハッピージャグラーVIII',
-    grape: [5.80, 5.74, 5.68, 5.62, 5.50, 5.40],
-    big:   [341.3, 315.1, 287.4, 260.1, 224.1, 195.9],
-    reg:   [455.1, 399.6, 364.1, 315.1, 255.8, 209.8]
-  },
-  {
-    name: 'ジャグラーガールズSS',
-    grape: [6.02, 5.96, 5.86, 5.76, 5.65, 5.54],
-    big:   [297.9, 282.5, 268.7, 248.6, 224.1, 204.8],
-    reg:   [455.1, 399.6, 341.3, 297.9, 248.6, 204.8]
-  },
-  {
-    name: 'ミスタージャグラー',
-    grape: [6.14, 6.08, 5.98, 5.88, 5.74, 5.60],
-    big:   [315.1, 297.9, 282.5, 260.1, 234.4, 209.8],
-    reg:   [439.8, 399.6, 364.1, 315.1, 255.8, 204.8]
-  },
-  {
-    name: 'ウルトラミラクルジャグラー',
-    grape: [6.14, 6.08, 5.98, 5.88, 5.74, 5.60],
-    big:   [297.9, 287.4, 268.7, 248.6, 224.1, 204.8],
-    reg:   [399.6, 364.1, 315.1, 268.7, 231.9, 195.9]
-  },
-  {
-    name: 'ネオアイムジャグラーEX',
-    grape: [6.00, 5.94, 5.84, 5.74, 5.63, 5.52],
-    big:   [297.9, 282.5, 268.7, 248.6, 224.1, 204.8],
-    reg:   [399.6, 341.3, 297.9, 260.1, 231.9, 204.8]
-  }
-];
-
-// ============================================================
 // データバージョン管理
-// このバージョンを上げるとlocalStorageのボタン設定がリセットされる
+// このバージョンを上げるとlocalStorageがリセットされる
 // ============================================================
-const DATA_VERSION = '2';
-
-// ジャグラー機種のデフォルトボタン設定 (7個: インデックス0〜6)
-const JUGGLER_BUTTON_CONFIG = [
-  { name: 'ぶどう',   color: '#22c55e' }, // 0
-  { name: 'BIG',     color: '#f97316' }, // 1
-  { name: 'REG',     color: '#888888' }, // 2
-  { name: 'チェリー', color: '#ef4444' }, // 3
-  { name: 'その他',   color: '#38bdf8' }, // 4
-  { name: '',         color: '#6B3A82' }, // 5 (予備)
-  { name: '',         color: '#6B3A82' }  // 6 (予備)
-];
+const DATA_VERSION = '3';
 
 // デフォルトのボタン設定 (7個: インデックス0〜6、8マス目は減算スイッチ固定)
 const DEFAULT_BUTTON_CONFIGS = [
@@ -1325,24 +1182,14 @@ let state = {
 // ============================================================
 // プロファイル構造
 // ============================================================
-function createProfile(name, isJuggler = false, jugglerData = null) {
-  const btnConfig = [];
-  for (let mode = 0; mode < 3; mode++) {
-    const modeConfig = [];
-    for (let i = 0; i < 7; i++) {
-      if (isJuggler) {
-        modeConfig.push({ ...JUGGLER_BUTTON_CONFIG[i] });
-      } else {
-        modeConfig.push({ ...DEFAULT_BUTTON_CONFIGS[i] });
-      }
-    }
-    btnConfig.push(modeConfig);
-  }
+function createProfile(name) {
+  // モードA/B/C 共通でデフォルトボタン設定をコピー
+  const btnConfig = [0, 1, 2].map(() =>
+    DEFAULT_BUTTON_CONFIGS.map(cfg => ({ ...cfg }))
+  );
   return {
     id: Date.now() + Math.random(),
     name,
-    isJuggler,
-    jugglerData, // ジャグラー機種データのインデックス or null
     // モードごとのカウント配列 [mode][btnIdx]
     counts: [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]],
     // 総ゲーム数
@@ -1363,14 +1210,9 @@ function saveState() {
   if (lastUrl) localStorage.setItem('slotCounter_lastUrl', lastUrl);
 }
 
-// デフォルトプロファイル一式を新規作成する
+// デフォルトプロファイルを新規作成する
 function createDefaultProfiles() {
-  const profiles = [];
-  profiles.push(createProfile('カスタム機種', false));
-  JUGGLER_MACHINES.forEach((m, i) => {
-    profiles.push(createProfile(m.name, true, i));
-  });
-  return profiles;
+  return [createProfile('カスタム機種')];
 }
 
 function loadState() {
@@ -1570,7 +1412,8 @@ function renderCountGrid() {
       <div class="btn-name">${cfg.name}</div>
     `;
 
-    btn.addEventListener('click', () => onCountBtnClick(i));
+    // 長押し: 最初200ms間隔、1.5秒後に100msに加速
+    bindLongPress(btn, () => onCountBtnClick(i), 200, 100);
     grid.appendChild(btn);
   }
 
@@ -1742,12 +1585,7 @@ function addNewProfile() {
   const input = document.getElementById('new-machine-name');
   const name = input.value.trim();
   if (!name) { showToast('機種名を入力してください'); return; }
-
-  // ジャグラー機種かチェック
-  const jugglerIdx = JUGGLER_MACHINES.findIndex(m => m.name === name);
-  const isJuggler = jugglerIdx >= 0;
-
-  const profile = createProfile(name, isJuggler, isJuggler ? jugglerIdx : null);
+  const profile = createProfile(name);
   state.profiles.push(profile);
   input.value = '';
   saveState();
@@ -1938,200 +1776,57 @@ function saveGames() {
 }
 
 // ============================================================
-// ジャグラー機種選択モーダル（設定推測の第1ステップ）
+// 長押し（高速連続入力）ヘルパー
+// initialMs: 最初の繰り返し間隔, fastMs: 加速後の間隔
+// accelAfterMs: 加速までの時間
 // ============================================================
-function openJugglerSelectModal() {
-  const list = document.getElementById('juggler-select-list');
-  list.innerHTML = '';
-  JUGGLER_MACHINES.forEach((machine, idx) => {
-    const item = document.createElement('div');
-    item.className = 'machine-item';
-    item.innerHTML = `
-      <span class="machine-item-name">${machine.name}</span>
-      <span class="machine-item-badge">ジャグラー</span>
-    `;
-    item.addEventListener('click', () => {
-      closeJugglerSelectModal();
-      openGuessModalForMachine(idx);
-    });
-    list.appendChild(item);
-  });
-  document.getElementById('juggler-select-modal').classList.remove('hidden');
+function startLongPress(callback, initialMs, fastMs, accelAfterMs = 1500) {
+  let intervalId = setInterval(callback, initialMs);
+  const accelTimer = setTimeout(() => {
+    clearInterval(intervalId);
+    intervalId = setInterval(callback, fastMs);
+  }, accelAfterMs);
+
+  return function stop() {
+    clearInterval(intervalId);
+    clearTimeout(accelTimer);
+  };
 }
 
-function closeJugglerSelectModal() {
-  document.getElementById('juggler-select-modal').classList.add('hidden');
+// ボタン要素に長押しイベントをバインドする
+function bindLongPress(el, callback, initialMs, fastMs) {
+  let stopFn = null;
+
+  function onStart(e) {
+    e.preventDefault();
+    if (stopFn) stopFn();
+    callback(); // 即時1回実行
+    stopFn = startLongPress(callback, initialMs, fastMs);
+  }
+
+  function onEnd() {
+    if (stopFn) { stopFn(); stopFn = null; }
+  }
+
+  el.addEventListener('touchstart',  onStart, { passive: false });
+  el.addEventListener('touchend',    onEnd);
+  el.addEventListener('touchcancel', onEnd);
+  el.addEventListener('mousedown',   onStart);
+  el.addEventListener('mouseup',     onEnd);
+  el.addEventListener('mouseleave',  onEnd);
+  // コンテキストメニュー（長押しポップアップ）を抑制
+  el.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 // ============================================================
-// 設定推測 (ベイズ推定) — 機種インデックスを引数で受け取る
+// 総ゲーム数 +/- 操作
 // ============================================================
-function openGuessModalForMachine(machineIdx) {
+function changeTotalGames(delta) {
   const profile = getCurrentProfile();
-  const machineData = JUGGLER_MACHINES[machineIdx];
-  const mode = state.currentMode;
-  const counts = profile ? profile.counts[mode] : [0,0,0,0,0,0,0];
-  const totalGames = profile ? profile.totalGames : 0;
-
-  const grapeCount = counts[0];
-  const bigCount   = counts[1];
-  const regCount   = counts[2];
-
-  // モーダルタイトルに機種名を表示
-  document.querySelector('#guess-modal .modal-title').textContent = `設定推測: ${machineData.name}`;
-
-  // 情報表示
-  document.getElementById('guess-info').innerHTML = `
-    総ゲーム数: <b>${totalGames.toLocaleString()}</b>ゲーム<br>
-    ぶどう: <b>${grapeCount}</b>回 (${grapeCount > 0 && totalGames > 0 ? '1/' + (totalGames/grapeCount).toFixed(1) : '---'})<br>
-    BIG: <b>${bigCount}</b>回 (${bigCount > 0 && totalGames > 0 ? '1/' + (totalGames/bigCount).toFixed(1) : '---'})<br>
-    REG: <b>${regCount}</b>回 (${regCount > 0 && totalGames > 0 ? '1/' + (totalGames/regCount).toFixed(1) : '---'})
-  `;
-
-  // ベイズ推定: 事前確率は均等 (1/6)
-  const priors = [1/6, 1/6, 1/6, 1/6, 1/6, 1/6];
-
-  function logLikelihood(settingIdx) {
-    let ll = 0;
-    const pg = 1 / machineData.grape[settingIdx];
-    const pb = 1 / machineData.big[settingIdx];
-    const pr = 1 / machineData.reg[settingIdx];
-    if (totalGames > 0) {
-      if (grapeCount > 0) ll += grapeCount * Math.log(pg);
-      ll += (totalGames - grapeCount) * Math.log(1 - pg);
-      if (bigCount > 0) ll += bigCount * Math.log(pb);
-      ll += (totalGames - bigCount) * Math.log(1 - pb);
-      if (regCount > 0) ll += regCount * Math.log(pr);
-      ll += (totalGames - regCount) * Math.log(1 - pr);
-    }
-    return ll;
-  }
-
-  const logLikelihoods = [];
-  for (let i = 0; i < 6; i++) {
-    logLikelihoods.push(logLikelihood(i) + Math.log(priors[i]));
-  }
-
-  // log-sum-expで正規化
-  const maxLL = Math.max(...logLikelihoods);
-  const exps = logLikelihoods.map(ll => Math.exp(ll - maxLL));
-  const sumExp = exps.reduce((a, b) => a + b, 0);
-  const posteriors = exps.map(e => e / sumExp);
-  const maxIdx = posteriors.indexOf(Math.max(...posteriors));
-
-  // 結果描画
-  const resultDiv = document.getElementById('guess-result');
-  resultDiv.innerHTML = '';
-  posteriors.forEach((prob, i) => {
-    const pct = (prob * 100).toFixed(1);
-    const item = document.createElement('div');
-    item.className = 'guess-item';
-    item.innerHTML = `
-      <span class="guess-label">設定${i+1}</span>
-      <div class="guess-bar-track">
-        <div class="guess-bar-fill ${i === maxIdx ? 'top' : ''}" style="width:${pct}%">
-          ${parseFloat(pct) > 10 ? `<span class="guess-pct">${pct}%</span>` : ''}
-        </div>
-      </div>
-      <span class="guess-pct-out">${pct}%</span>
-    `;
-    resultDiv.appendChild(item);
-  });
-
-  document.getElementById('guess-modal').classList.remove('hidden');
-}
-
-// 後方互換用（既存のジャグラープロファイルから呼ぶ場合）
-function openGuessModal() {
-  const profile = getCurrentProfile();
-  if (!profile || !profile.isJuggler || profile.jugglerData === null) return;
-
-  const machineData = JUGGLER_MACHINES[profile.jugglerData];
-  const mode = state.currentMode;
-  const counts = profile.counts[mode];
-  const btnConfig = profile.btnConfig[mode];
-
-  // ジャグラーボタン対応: ぶどう=idx0, BIG=idx1, REG=idx2
-  const totalGames = profile.totalGames;
-  const grapeCount = counts[0]; // ぶどう
-  const bigCount   = counts[1]; // BIG
-  const regCount   = counts[2]; // REG
-
-  // 情報表示
-  document.getElementById('guess-info').innerHTML = `
-    総ゲーム数: <b>${totalGames.toLocaleString()}</b>ゲーム<br>
-    ぶどう: <b>${grapeCount}</b>回 (${grapeCount > 0 && totalGames > 0 ? '1/' + (totalGames/grapeCount).toFixed(1) : '---'})<br>
-    BIG: <b>${bigCount}</b>回 (${bigCount > 0 && totalGames > 0 ? '1/' + (totalGames/bigCount).toFixed(1) : '---'})<br>
-    REG: <b>${regCount}</b>回 (${regCount > 0 && totalGames > 0 ? '1/' + (totalGames/regCount).toFixed(1) : '---'})
-  `;
-
-  // ベイズ推定
-  // 事前確率: 均等 (1/6)
-  const priors = [1/6, 1/6, 1/6, 1/6, 1/6, 1/6];
-
-  // 尤度計算 (二項分布の尤度)
-  // P(data | setting) = P(grape)^grapeCount * (1-P(grape))^(games-grapeCount) * ...
-  // 対数尤度を使って計算
-  function logLikelihood(settingIdx) {
-    let ll = 0;
-    const pg = 1 / machineData.grape[settingIdx];
-    const pb = 1 / machineData.big[settingIdx];
-    const pr = 1 / machineData.reg[settingIdx];
-
-    if (totalGames > 0) {
-      // ぶどう
-      if (grapeCount > 0) ll += grapeCount * Math.log(pg);
-      ll += (totalGames - grapeCount) * Math.log(1 - pg);
-      // BIG
-      if (bigCount > 0) ll += bigCount * Math.log(pb);
-      ll += (totalGames - bigCount) * Math.log(1 - pb);
-      // REG
-      if (regCount > 0) ll += regCount * Math.log(pr);
-      ll += (totalGames - regCount) * Math.log(1 - pr);
-    }
-    return ll;
-  }
-
-  const logLikelihoods = [];
-  for (let i = 0; i < 6; i++) {
-    logLikelihoods.push(logLikelihood(i) + Math.log(priors[i]));
-  }
-
-  // log-sum-expで正規化
-  const maxLL = Math.max(...logLikelihoods);
-  const exps = logLikelihoods.map(ll => Math.exp(ll - maxLL));
-  const sumExp = exps.reduce((a, b) => a + b, 0);
-  const posteriors = exps.map(e => e / sumExp);
-
-  // 最高確率の設定
-  const maxIdx = posteriors.indexOf(Math.max(...posteriors));
-
-  // 結果描画
-  const resultDiv = document.getElementById('guess-result');
-  resultDiv.innerHTML = '';
-
-  posteriors.forEach((prob, i) => {
-    const pct = (prob * 100).toFixed(1);
-    const item = document.createElement('div');
-    item.className = 'guess-item';
-
-    item.innerHTML = `
-      <span class="guess-label">設定${i+1}</span>
-      <div class="guess-bar-track">
-        <div class="guess-bar-fill ${i === maxIdx ? 'top' : ''}" style="width:${pct}%">
-          ${parseFloat(pct) > 10 ? `<span class="guess-pct">${pct}%</span>` : ''}
-        </div>
-      </div>
-      <span class="guess-pct-out">${pct}%</span>
-    `;
-    resultDiv.appendChild(item);
-  });
-
-  document.getElementById('guess-modal').classList.remove('hidden');
-}
-
-function closeGuessModal() {
-  document.getElementById('guess-modal').classList.add('hidden');
+  if (!profile) return;
+  profile.totalGames = Math.max(0, profile.totalGames + delta);
+  saveState();
+  renderTotalGames();
 }
 
 // ============================================================
@@ -2160,12 +1855,15 @@ function handleOrientationChange() {
 // イベントバインド
 // ============================================================
 function bindEvents() {
-  // 設定推測ボタン（機種選択 → 推測結果）
-  document.getElementById('estimate-btn').addEventListener('click', openJugglerSelectModal);
-  document.getElementById('juggler-select-close').addEventListener('click', closeJugglerSelectModal);
-  document.getElementById('juggler-select-modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('juggler-select-modal')) closeJugglerSelectModal();
-  });
+  // 総ゲーム数 +/- 長押し（最初100ms間隔、1.5秒後に50msに加速）
+  bindLongPress(
+    document.getElementById('total-games-inc'),
+    () => changeTotalGames(+1), 100, 50
+  );
+  bindLongPress(
+    document.getElementById('total-games-dec'),
+    () => changeTotalGames(-1), 100, 50
+  );
 
   // 機種切替モーダル（設定画面からのアクセス用に残す）
   document.getElementById('machine-modal-close').addEventListener('click', closeMachineModal);
@@ -2234,12 +1932,6 @@ function bindEvents() {
 
   // リセット
   document.getElementById('reset-btn').addEventListener('click', resetCounts);
-
-  // 設定推測モーダルの閉じるボタン
-  document.getElementById('guess-modal-close').addEventListener('click', closeGuessModal);
-  document.getElementById('guess-modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('guess-modal')) closeGuessModal();
-  });
 
   // YouTubeコントロール
   document.getElementById('play-btn').addEventListener('click', () => {
