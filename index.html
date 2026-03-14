@@ -1450,38 +1450,21 @@ function playVideo(url) {
 
   const container = document.getElementById('video-container');
   const placeholder = document.getElementById('video-placeholder');
-
-  // プレースホルダーを隠す
   if (placeholder) placeholder.style.display = 'none';
 
-  if (ytPlayerReady && ytPlayer) {
-    // 既存プレイヤーでロード
-    ytPlayer.loadVideoById(videoId);
-  } else {
-    // IFrameを直接埋め込み (IFrame APIが未準備の場合のフォールバック)
-    let iframe = document.getElementById('youtube-iframe');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'youtube-iframe';
-      iframe.style.cssText = 'width:100%;height:100%;border:none;';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
-      container.appendChild(iframe);
-    }
-    // playsinline=1 でiPhone対応
-    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
+  // 毎回iframeを作り直して確実に再生（既存プレイヤーの状態に依存しない）
+  const old = document.getElementById('youtube-iframe');
+  if (old) old.remove();
+  ytPlayer = null;
 
-    // IFrame API でプレイヤーを初期化
-    if (ytPlayerReady && !ytPlayer) {
-      ytPlayer = new YT.Player('youtube-iframe', {
-        events: {
-          onReady: (e) => { e.target.playVideo(); }
-        }
-      });
-    }
-  }
+  const iframe = document.createElement('iframe');
+  iframe.id = 'youtube-iframe';
+  iframe.style.cssText = 'width:100%;height:100%;border:none;';
+  iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+  iframe.allowFullscreen = true;
+  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
+  container.appendChild(iframe);
 
-  // URLを保存
   localStorage.setItem('slotCounter_lastUrl', url);
 }
 
@@ -2188,7 +2171,7 @@ function bindEvents() {
   // ×ボタン押下: 入力欄をクリア + 動画エリアをプレースホルダーに戻す
   urlClearBtn.addEventListener('click', () => {
     urlInput.value = '';
-    // iframeを削除してプレースホルダーを再表示
+    ytPlayer = null;
     const iframe = document.getElementById('youtube-iframe');
     if (iframe) iframe.remove();
     const placeholder = document.getElementById('video-placeholder');
