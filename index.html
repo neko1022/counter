@@ -1999,48 +1999,61 @@ function saveGames() {
 const IS_TOUCH = navigator.maxTouchPoints > 0;
 
 // ============================================================
-// カウントボタン長押し（2段階加速: initialMs → fastMs@1500ms後）
+// カウントボタン長押し
+// rAF + PointerEvents で実装（setInterval不使用）
+// 2段階加速: 最初はinitialMs間隔、1500ms経過後にfastMs間隔
 // ============================================================
 function bindLongPress(el, callback, initialMs, fastMs) {
-  let timerId   = null;
-  let accelTimer = null;
+  let rafId         = null;
+  let activePointer = null;
+  let lastTs        = null;
+  let accumulator   = 0;
+  let totalHeld     = 0;
 
   function stop() {
-    if (timerId   !== null) { clearInterval(timerId);    timerId   = null; }
-    if (accelTimer !== null) { clearTimeout(accelTimer); accelTimer = null; }
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    activePointer = null;
+    lastTs        = null;
+    accumulator   = 0;
+    totalHeld     = 0;
   }
 
-  function start(e) {
-    e.preventDefault();
+  function loop(ts) {
+    if (lastTs === null) lastTs = ts;
+    const delta = ts - lastTs;
+    lastTs       = ts;
+    totalHeld   += delta;
+    accumulator += delta;
+
+    // 1500ms経過後にfastMsへ加速
+    const ms = totalHeld >= 1500 ? fastMs : initialMs;
+    while (accumulator >= ms) {
+      accumulator -= ms;
+      callback();
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function onPointerDown(e) {
+    // 複数タッチは最後の1本だけ処理
     stop();
-    callback(); // 即時1回
-    timerId = setInterval(callback, initialMs);
-    accelTimer = setTimeout(() => {
-      accelTimer = null;
-      if (timerId !== null) {
-        clearInterval(timerId);
-        timerId = setInterval(callback, fastMs);
-      }
-    }, 1500);
+    activePointer = e.pointerId;
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    callback(); // 押した瞬間に即時1回
+    rafId = requestAnimationFrame(loop);
   }
 
-  // タッチイベント（メイン）
-  el.addEventListener('touchstart',  start, { passive: false });
-  el.addEventListener('touchend',    stop,  { passive: true });
-  el.addEventListener('touchcancel', stop,  { passive: true });
-
-  // window全体でも確実に停止（指をボタン外で離した場合もカバー）
-  window.addEventListener('touchend',    stop, { passive: true });
-  window.addEventListener('touchcancel', stop, { passive: true });
-
-  // マウスイベントは非タッチデバイス（PCブラウザ）専用
-  if (!IS_TOUCH) {
-    el.addEventListener('mousedown',  start);
-    el.addEventListener('mouseup',    stop);
-    el.addEventListener('mouseleave', stop);
+  function onWindowPointerUp(e) {
+    if (activePointer !== null && e.pointerId === activePointer) {
+      stop();
+    }
   }
 
-  el.addEventListener('contextmenu', e => e.preventDefault());
+  el.addEventListener('pointerdown',           onPointerDown);
+  window.addEventListener('pointerup',         onWindowPointerUp);
+  window.addEventListener('pointercancel',     onWindowPointerUp);
+  el.addEventListener('contextmenu',           e => e.preventDefault());
 }
 
 // ============================================================
