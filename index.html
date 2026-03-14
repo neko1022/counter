@@ -1526,8 +1526,7 @@ function renderCountGrid() {
       <div class="btn-name">${cfg.name}</div>
     `;
 
-    // 長押し: 最初200ms間隔、1.5秒後に100msに加速
-    bindLongPress(btn, () => onCountBtnClick(i), 200, 100);
+    btn.addEventListener('click', () => onCountBtnClick(i));
     grid.appendChild(btn);
   }
 
@@ -1998,63 +1997,6 @@ function saveGames() {
 // タッチデバイス判定（pointer events利用）
 const IS_TOUCH = navigator.maxTouchPoints > 0;
 
-// ============================================================
-// カウントボタン長押し
-// rAF + PointerEvents で実装（setInterval不使用）
-// 2段階加速: 最初はinitialMs間隔、1500ms経過後にfastMs間隔
-// ============================================================
-function bindLongPress(el, callback, initialMs, fastMs) {
-  let rafId         = null;
-  let activePointer = null;
-  let lastTs        = null;
-  let accumulator   = 0;
-  let totalHeld     = 0;
-
-  function stop() {
-    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
-    activePointer = null;
-    lastTs        = null;
-    accumulator   = 0;
-    totalHeld     = 0;
-  }
-
-  function loop(ts) {
-    if (lastTs === null) lastTs = ts;
-    const delta = ts - lastTs;
-    lastTs       = ts;
-    totalHeld   += delta;
-    accumulator += delta;
-
-    // 1500ms経過後にfastMsへ加速
-    const ms = totalHeld >= 1500 ? fastMs : initialMs;
-    while (accumulator >= ms) {
-      accumulator -= ms;
-      callback();
-    }
-
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function onPointerDown(e) {
-    // 複数タッチは最後の1本だけ処理
-    stop();
-    activePointer = e.pointerId;
-    try { el.setPointerCapture(e.pointerId); } catch (_) {}
-    callback(); // 押した瞬間に即時1回
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function onWindowPointerUp(e) {
-    if (activePointer !== null && e.pointerId === activePointer) {
-      stop();
-    }
-  }
-
-  el.addEventListener('pointerdown',           onPointerDown);
-  window.addEventListener('pointerup',         onWindowPointerUp);
-  window.addEventListener('pointercancel',     onWindowPointerUp);
-  el.addEventListener('contextmenu',           e => e.preventDefault());
-}
 
 // ============================================================
 // 総ゲーム数 +/- 操作
