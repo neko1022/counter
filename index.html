@@ -244,7 +244,7 @@
       transform: translateY(-50%);
       width: 20px;
       height: 20px;
-      display: none; /* URLが空の時は非表示 */
+      display: flex;
       align-items: center;
       justify-content: center;
       background: var(--bg2);
@@ -2230,18 +2230,9 @@ function bindEvents() {
   const urlInput    = document.getElementById('url-input');
   const urlClearBtn = document.getElementById('url-clear-btn');
 
-  // 入力内容が変わるたびに×ボタンの表示を切り替える
-  function updateUrlClearBtn() {
-    urlClearBtn.style.display = urlInput.value ? 'flex' : 'none';
-  }
-
-  urlInput.addEventListener('input',  updateUrlClearBtn);
-  urlInput.addEventListener('change', updateUrlClearBtn);
-
   // ×ボタン押下: 入力欄をクリア + 動画エリアをプレースホルダーに戻す
   urlClearBtn.addEventListener('click', () => {
     urlInput.value = '';
-    updateUrlClearBtn();
     // iframeを削除してプレースホルダーを再表示
     const iframe = document.getElementById('youtube-iframe');
     if (iframe) iframe.remove();
@@ -2249,9 +2240,6 @@ function bindEvents() {
     if (placeholder) placeholder.style.display = '';
     localStorage.removeItem('slotCounter_lastUrl');
   });
-
-  // 初期表示時にも反映（前回のURLが復元されている場合）
-  updateUrlClearBtn();
 
   document.getElementById('fav-btn').addEventListener('click', openFavPicker);
   document.getElementById('fav-picker-close').addEventListener('click', closeFavPicker);
