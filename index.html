@@ -831,6 +831,54 @@
       flex-shrink: 0;
     }
 
+    /* 編集ボタン */
+    .fav-item-edit {
+      font-size: 13px;
+      padding: 4px 8px;
+      background: var(--bg3);
+      border: 1px solid var(--purple-deep);
+      border-radius: 5px;
+      color: var(--purple-pale);
+      flex-shrink: 0;
+    }
+
+    /* 編集モード時の入力欄 */
+    .fav-item-edit-input {
+      width: 100%;
+      padding: 4px 7px;
+      background: var(--bg);
+      border: 1px solid var(--purple);
+      border-radius: 5px;
+      font-size: 12px;
+      color: var(--cream);
+      margin-bottom: 3px;
+    }
+
+    .fav-item-edit-input:focus {
+      outline: none;
+      border-color: var(--purple-pale);
+    }
+
+    /* 編集モード時の保存・キャンセルボタン */
+    .fav-item-save {
+      font-size: 12px;
+      padding: 4px 8px;
+      background: var(--purple-deep);
+      border-radius: 5px;
+      color: var(--cream);
+      flex-shrink: 0;
+    }
+
+    .fav-item-cancel {
+      font-size: 12px;
+      padding: 4px 8px;
+      background: var(--bg3);
+      border: 1px solid var(--bg3);
+      border-radius: 5px;
+      color: var(--text-mid);
+      flex-shrink: 0;
+    }
+
     /* 追加フォーム: URL → 名前 → 追加ボタンを縦1列 */
     .add-fav-form {
       display: flex;
@@ -1685,55 +1733,134 @@ function renderBtnEditor() {
   }
 }
 
+// 編集中のインデックスを管理（nullなら通常表示）
+let favEditingIndex = null;
+
 function renderFavEditor() {
   const list = document.getElementById('fav-editor-list');
   list.innerHTML = '';
+
   state.favorites.forEach((fav, i) => {
     const item = document.createElement('div');
     item.className = 'fav-item';
+    item.style.flexDirection = 'column'; // 編集モード時に縦積みになるよう準備
 
-    // 番号
-    const num = document.createElement('span');
-    num.className = 'fav-item-num';
-    num.textContent = i + 1 + '.';
+    if (i === favEditingIndex) {
+      // ===== 編集モード =====
+      item.style.gap = '6px';
 
-    // 名前 + URL（縦積み）
-    const info = document.createElement('div');
-    info.className = 'fav-item-info';
+      // URL入力欄
+      const urlInput = document.createElement('input');
+      urlInput.type = 'url';
+      urlInput.className = 'fav-item-edit-input';
+      urlInput.value = fav.url;
+      urlInput.placeholder = 'YouTube URL';
+      urlInput.inputMode = 'url';
 
-    const name = document.createElement('span');
-    name.className = 'fav-item-name';
-    name.textContent = fav.name;
+      // 名前入力欄
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'fav-item-edit-input';
+      nameInput.value = fav.name;
+      nameInput.placeholder = '名前（省略時はURLをそのまま使用）';
+      nameInput.style.marginBottom = '0';
 
-    const url = document.createElement('span');
-    url.className = 'fav-item-url';
-    url.textContent = fav.url;
+      // 保存・キャンセルボタン行
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:6px;';
 
-    info.appendChild(name);
-    info.appendChild(url);
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'fav-item-save';
+      saveBtn.textContent = '保存';
+      saveBtn.style.flex = '1';
+      saveBtn.addEventListener('click', () => {
+        const newUrl  = urlInput.value.trim();
+        const newName = nameInput.value.trim() || newUrl;
+        if (!newUrl) { showToast('URLを入力してください'); return; }
+        state.favorites[i] = { name: newName, url: newUrl };
+        favEditingIndex = null;
+        saveState();
+        renderFavEditor();
+      });
 
-    const playBtn = document.createElement('button');
-    playBtn.className = 'fav-item-play';
-    playBtn.textContent = '▶';
-    playBtn.addEventListener('click', () => {
-      document.getElementById('url-input').value = fav.url;
-      playVideo(fav.url);
-      closeSettingsModal();
-    });
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'fav-item-cancel';
+      cancelBtn.textContent = 'キャンセル';
+      cancelBtn.style.flex = '1';
+      cancelBtn.addEventListener('click', () => {
+        favEditingIndex = null;
+        renderFavEditor();
+      });
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'fav-item-del';
-    delBtn.textContent = '✕';
-    delBtn.addEventListener('click', () => {
-      state.favorites.splice(i, 1);
-      saveState();
-      renderFavEditor();
-    });
+      btnRow.appendChild(saveBtn);
+      btnRow.appendChild(cancelBtn);
 
-    item.appendChild(num);
-    item.appendChild(info);
-    item.appendChild(playBtn);
-    item.appendChild(delBtn);
+      item.appendChild(urlInput);
+      item.appendChild(nameInput);
+      item.appendChild(btnRow);
+
+    } else {
+      // ===== 通常表示 =====
+      item.style.flexDirection = 'row';
+      item.style.alignItems = 'center';
+
+      // 番号
+      const num = document.createElement('span');
+      num.className = 'fav-item-num';
+      num.textContent = i + 1 + '.';
+
+      // 名前 + URL（縦積み）
+      const info = document.createElement('div');
+      info.className = 'fav-item-info';
+
+      const name = document.createElement('span');
+      name.className = 'fav-item-name';
+      name.textContent = fav.name;
+
+      const url = document.createElement('span');
+      url.className = 'fav-item-url';
+      url.textContent = fav.url;
+
+      info.appendChild(name);
+      info.appendChild(url);
+
+      // 再生ボタン
+      const playBtn = document.createElement('button');
+      playBtn.className = 'fav-item-play';
+      playBtn.textContent = '▶';
+      playBtn.addEventListener('click', () => {
+        document.getElementById('url-input').value = fav.url;
+        playVideo(fav.url);
+        closeSettingsModal();
+      });
+
+      // 編集ボタン
+      const editBtn = document.createElement('button');
+      editBtn.className = 'fav-item-edit';
+      editBtn.textContent = '✎';
+      editBtn.addEventListener('click', () => {
+        favEditingIndex = i;
+        renderFavEditor();
+      });
+
+      // 削除ボタン
+      const delBtn = document.createElement('button');
+      delBtn.className = 'fav-item-del';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', () => {
+        if (favEditingIndex === i) favEditingIndex = null;
+        state.favorites.splice(i, 1);
+        saveState();
+        renderFavEditor();
+      });
+
+      item.appendChild(num);
+      item.appendChild(info);
+      item.appendChild(playBtn);
+      item.appendChild(editBtn);
+      item.appendChild(delBtn);
+    }
+
     list.appendChild(item);
   });
 }
