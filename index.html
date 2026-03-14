@@ -1827,22 +1827,30 @@ function changeTotalGames(delta) {
 }
 
 // 総ゲーム数 +/- ボタン専用バインド
-// カウントベース3段階加速: 100ms(0〜99回) → 50ms(100〜199回) → 25ms(200回〜)
+// カウントベース4段階加速:
+//   100ms(0〜49回) → 50ms(50〜149回) → 25ms(150〜249回) → 10ms(250回〜)
 // 指を離したタイミングで確率表示を再計算する
 function bindTotalGamesBtn(el, delta) {
   let intervalId = null;
   let tickCount = 0;
   let didChange = false;
 
+  // 各段階の切り替え閾値とその後のインターバル(ms)
+  const STAGES = [
+    { at: 50,  ms: 50 },
+    { at: 150, ms: 25 },
+    { at: 250, ms: 10 },
+  ];
+
   function tick() {
     changeTotalGames(delta);
     didChange = true;
     tickCount++;
-    // 100回ごとにインターバルを半分に（最小25ms）
-    if (tickCount === 100 || tickCount === 200) {
+    // 閾値に達したらインターバルを切り替え
+    const stage = STAGES.find(s => s.at === tickCount);
+    if (stage) {
       clearInterval(intervalId);
-      const nextMs = tickCount === 100 ? 50 : 25;
-      intervalId = setInterval(tick, nextMs);
+      intervalId = setInterval(tick, stage.ms);
     }
   }
 
