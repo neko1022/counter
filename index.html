@@ -1776,11 +1776,11 @@ function renderBtnEditor() {
     nameInput.type = 'text';
     nameInput.value = cfg.name;
     nameInput.placeholder = `ボタン${i+1}`;
+    // 文字入力のたびに即時保存・反映
     nameInput.addEventListener('input', () => {
       state.editingButtons[mode][i].name = nameInput.value;
+      applyAndSave();
     });
-    // フォーカスが外れたタイミングで保存・反映
-    nameInput.addEventListener('blur', applyAndSave);
 
     const colorInput = document.createElement('input');
     colorInput.type = 'color';
