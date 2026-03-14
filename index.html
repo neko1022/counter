@@ -1996,55 +1996,64 @@ function saveGames() {
 // iPhone7などの古い機種でも確実に停止できるよう堅牢に実装
 // ============================================================
 function bindLongPress(el, callback, initialMs, fastMs) {
-  let intervalId = null;  // 常に単一のintervalIdを管理
+  let intervalId = null;
   let accelTimer = null;
+  let touchActive = false; // タッチ処理中はmouseイベントを無視する
 
-  // 既存のintervalを確実にクリアする（多重起動防止）
   function stopAll() {
-    if (intervalId !== null) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-    if (accelTimer !== null) {
-      clearTimeout(accelTimer);
-      accelTimer = null;
-    }
+    if (intervalId !== null) { clearInterval(intervalId); intervalId = null; }
+    if (accelTimer !== null) { clearTimeout(accelTimer);  accelTimer = null; }
   }
 
-  function onStart(e) {
-    e.preventDefault();
-    stopAll(); // 開始前に必ずクリア
-    callback(); // 即時1回実行
-    // 最初はinitialMs間隔で繰り返し
+  function start() {
+    stopAll();
+    callback();
     intervalId = setInterval(callback, initialMs);
-    // accelAfterMs後にfastMsに加速
     accelTimer = setTimeout(() => {
       stopAll();
       intervalId = setInterval(callback, fastMs);
     }, 1500);
   }
 
-  // 停止処理を一つの関数に集約（すべての終了イベントから呼ぶ）
-  function onEnd() {
+  function onTouchStart(e) {
+    e.preventDefault();
+    touchActive = true;
+    start();
+  }
+
+  function onTouchEnd() {
+    touchActive = false;
     stopAll();
   }
 
-  // touchmoveでボタン外に出た場合も停止
+  // ボタン外（子要素は含む）に出た場合だけ停止
   function onTouchMove(e) {
     const touch = e.changedTouches[0];
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (target !== el) {
-      onEnd();
+    if (!el.contains(target)) {
+      touchActive = false;
+      stopAll();
     }
   }
 
-  el.addEventListener('touchstart',  onStart,      { passive: false });
-  el.addEventListener('touchend',    onEnd,         { passive: true });
-  el.addEventListener('touchcancel', onEnd,         { passive: true });
-  el.addEventListener('touchmove',   onTouchMove,   { passive: true });
-  el.addEventListener('mousedown',   onStart);
-  el.addEventListener('mouseup',     onEnd);
-  el.addEventListener('mouseleave',  onEnd);
+  // touchイベントで処理済みの場合はmouseイベントを無視
+  function onMouseDown() {
+    if (touchActive) return;
+    start();
+  }
+
+  function onMouseUp() {
+    if (touchActive) return;
+    stopAll();
+  }
+
+  el.addEventListener('touchstart',  onTouchStart, { passive: false });
+  el.addEventListener('touchend',    onTouchEnd,   { passive: true });
+  el.addEventListener('touchcancel', onTouchEnd,   { passive: true });
+  el.addEventListener('touchmove',   onTouchMove,  { passive: true });
+  el.addEventListener('mousedown',   onMouseDown);
+  el.addEventListener('mouseup',     onMouseUp);
+  el.addEventListener('mouseleave',  onMouseUp);
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 
